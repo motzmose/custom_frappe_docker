@@ -1,31 +1,33 @@
 version: "3"
 
 services:
-  traefik:
-    image: "traefik:v2.2"
-    command:
-      - "--log.level=DEBUG"
-      - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=false"
-      - "--entrypoints.web.address=:80"
-      - "--entrypoints.websecure.address=:443"
-      - "--certificatesresolvers.excelresolver.acme.httpchallenge=true"
-      - "--certificatesresolvers.excelresolver.acme.httpchallenge.entrypoint=web"
-      - "--certificatesresolvers.excelresolver.acme.email=${LETSENCRYPT_EMAIL}"
-      - "--certificatesresolvers.excelresolver.acme.storage=/letsencrypt/acme.json"
-    labels:
-      # enable traefik
-      - "traefik.enable=true"
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - cert-vol:/letsencrypt
-      - /var/run/docker.sock:/var/run/docker.sock:ro
+  # traefik:
+  #   image: "traefik:v2.2"
+  #   command:
+  #     - "--log.level=DEBUG"
+  #     - "--providers.docker=true"
+  #     - "--providers.docker.exposedbydefault=false"
+  #     - "--entrypoints.web.address=:80"
+  #     - "--entrypoints.websecure.address=:443"
+  #     - "--certificatesresolvers.excelresolver.acme.httpchallenge=true"
+  #     - "--certificatesresolvers.excelresolver.acme.httpchallenge.entrypoint=web"
+  #     - "--certificatesresolvers.excelresolver.acme.email=${LETSENCRYPT_EMAIL}"
+  #     - "--certificatesresolvers.excelresolver.acme.storage=/letsencrypt/acme.json"
+  #   labels:
+  #     # enable traefik
+  #     - "traefik.enable=true"
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - cert-vol:/letsencrypt
+  #     - /var/run/docker.sock:/var/run/docker.sock:ro
 
   custom-erpnext-nginx:
     image: custom-erpnext-nginx:${ERPNEXT_VERSION}
     restart: on-failure
+    ports:
+      - "9033:8000"
     environment:
       - FRAPPE_PY=erpnext-python
       - FRAPPE_PY_PORT=8000
@@ -33,12 +35,21 @@ services:
       - SOCKETIO_PORT=9000
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.custom-erpnext-nginx.rule=Host(${SITES})"
-      - "${ENTRYPOINT_LABEL}"
-      - "traefik.http.services.custom-erpnext-nginx.loadbalancer.server.port=80"
+      - "traefik.http.routers.gdcvw.entrypoints=http"
+      - "traefik.http.routers.gdcvw.rule=Host(`verwaltung.gdc-bw.de`)"
+      - "traefik.http.routers.gdcvw.middlewares=https-redirect@file"
+      - "traefik.http.routers.gdcvw-sec.entrypoints=https"
+      - "traefik.http.routers.gdcvw-sec.rule=Host(`verwaltung.gdc-bw.de`)"
+      - "traefik.http.routers.gdcvw-sec.tls=true"
+      - "traefik.http.routers.gdcvw-sec.tls.options=myTLSOptions@file"
+      - "traefik.http.routers.gdcvw-sec.tls.certresolver=le"
+      - "traefik.http.services.gdcvw.loadbalancer.server.port=8080"
     volumes:
       - sites-vol:/var/www/html/sites:rw
       - assets-vol:/assets:rw
+    networks:
+      - gdcintern
+      - web
 
   erpnext-python:
     image: custom-erpnext-worker:${ERPNEXT_VERSION}
@@ -53,6 +64,8 @@ services:
     volumes:
       - sites-vol:/home/frappe/frappe-bench/sites:rw
       - assets-vol:/home/frappe/frappe-bench/sites/assets:rw
+    networks:
+      - gdcintern
 
   frappe-socketio:
     image: frappe/frappe-socketio:${FRAPPE_VERSION}
@@ -61,6 +74,8 @@ services:
       - redis-socketio
     volumes:
       - sites-vol:/home/frappe/frappe-bench/sites:rw
+    networks:
+      - gdcintern
 
   custom-erpnext-worker-default:
     image: custom-erpnext-worker:${ERPNEXT_VERSION}
@@ -71,6 +86,8 @@ services:
       - redis-cache
     volumes:
       - sites-vol:/home/frappe/frappe-bench/sites:rw
+    networks:
+      - gdcintern
 
   custom-erpnext-worker-short:
     image: custom-erpnext-worker:${ERPNEXT_VERSION}
@@ -83,6 +100,8 @@ services:
       - redis-cache
     volumes:
       - sites-vol:/home/frappe/frappe-bench/sites:rw
+    networks:
+      - gdcintern
 
   custom-erpnext-worker-long:
     image: custom-erpnext-worker:${ERPNEXT_VERSION}
@@ -95,6 +114,8 @@ services:
       - redis-cache
     volumes:
       - sites-vol:/home/frappe/frappe-bench/sites:rw
+    networks:
+      - gdcintern
 
   erpnext-schedule:
     image: custom-erpnext-worker:${ERPNEXT_VERSION}
@@ -105,24 +126,32 @@ services:
       - redis-cache
     volumes:
       - sites-vol:/home/frappe/frappe-bench/sites:rw
+    networks:
+      - gdcintern
 
   redis-cache:
     image: redis:latest
     restart: on-failure
     volumes:
       - redis-cache-vol:/data
+    networks:
+      - gdcintern
 
   redis-queue:
     image: redis:latest
     restart: on-failure
     volumes:
       - redis-queue-vol:/data
+    networks:
+      - gdcintern
 
   redis-socketio:
     image: redis:latest
     restart: on-failure
     volumes:
       - redis-socketio-vol:/data
+    networks:
+      - gdcintern
 
   mariadb:
     image: mariadb:10.3
@@ -132,6 +161,8 @@ services:
     volumes:
       - ./frappe-mariadb.cnf:/etc/mysql/conf.d/frappe.cnf
       - mariadb-vol:/var/lib/mysql
+    networks:
+      - gdcintern
 
   site-creator:
     image: custom-erpnext-worker:${ERPNEXT_VERSION}
@@ -147,6 +178,8 @@ services:
       - INSTALL_APPS=${INSTALL_APPS}
     volumes:
       - sites-vol:/home/frappe/frappe-bench/sites:rw
+    networks:
+      - gdcintern
 
 volumes:
   mariadb-vol:
@@ -156,3 +189,8 @@ volumes:
   assets-vol:
   sites-vol:
   cert-vol:
+
+networks:
+  web:
+    external: true
+  gdcintern:

@@ -20,24 +20,24 @@ For nginx:
 
 ```shell
 # For edge
-docker build -t custom-erpnext-nginx:latest nginx
+docker build -t custom-erpnext-nginx:latest nginx --no-cache=true
 
 # For version-12
-docker build --build-arg=FRAPPE_BRANCH=version-12 -t custom-erpnext-nginx:v12 nginx
+docker build --build-arg=FRAPPE_BRANCH=version-12 -t custom-erpnext-nginx:v12 nginx --no-cache=true
 
 # For version-13
-docker build --build-arg=FRAPPE_BRANCH=version-13 -t custom-erpnext-nginx:v13 nginx
+docker build --build-arg=FRAPPE_BRANCH=version-13 -t custom-erpnext-nginx:v13 nginx --no-cache=true
 ```
 
 For worker:
 
 ```shell
 # For edge
-docker build -t custom-erpnext-worker:latest worker
+docker build -t custom-erpnext-worker:latest worker --no-cache=true
 
 # For version-12
-docker build --build-arg=FRAPPE_BRANCH=version-12 -t custom-erpnext-worker:v12 worker
+docker build --build-arg=FRAPPE_BRANCH=version-12 -t custom-erpnext-worker:v12 worker --no-cache=true
 
 # For version-13
-docker build --build-arg=FRAPPE_BRANCH=version-13 -t custom-erpnext-worker:v13 worker
+docker build --build-arg=FRAPPE_BRANCH=version-13 -t custom-erpnext-worker:v13 worker --no-cache=true
 ```
